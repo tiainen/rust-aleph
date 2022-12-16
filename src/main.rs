@@ -26,9 +26,9 @@ struct Args {
     /// Total number of nodes that will be running
     #[clap(long, short = 'c', default_value = "5")]
     pub node_count: usize,
-    /// Total number of items to count
+    /// One or more strings to provide as data
     #[clap(long, short = 'd')]
-    pub data: String,
+    pub data: Vec<String>,
 }
 
 fn create_backup(node_id: NodeIndex) -> anyhow::Result<(fs::File, io::Cursor<Vec<u8>>)> {
@@ -71,10 +71,8 @@ async fn main() -> anyhow::Result<()> {
         network.add_address(n, format!("127.0.0.1:{port}"));
     };
 
-    let chars_as_u32 = args.data.chars().into_iter().map(|c| c as u32).collect();
-
     let data_length = args.data.len();
-    let data_provider = SimpleDataProvider::new(index, chars_as_u32);
+    let data_provider = SimpleDataProvider::new(index, args.data);
     let (finalization_handler, mut finalization_receiver) = SimpleFinalizationHandler::new();
 
     let (backup_saver, backup_loader) = create_backup(index)?;
@@ -101,12 +99,12 @@ async fn main() -> anyhow::Result<()> {
 
     loop {
         match finalization_receiver.next().await {
-            Some((id, char)) => {
+            Some((id, data)) => {
                 *count_finalized.get_mut(&id).unwrap() += 1;
                 debug!(
-                    "Finalized new item: node {:?}, char {:?}; total: {:?}",
+                    "Finalized new item: node {:?}, data {:?}; total: {:?}",
                     id.0,
-                    char::from_u32(char).unwrap_or('�'),
+                    String::from_utf8(data).unwrap(),
                     finalized_counts(&count_finalized)
                 );
             }

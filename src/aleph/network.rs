@@ -91,7 +91,7 @@ impl SimpleNetwork {
     }
 
     fn send_data(&self, address: SocketAddr, data: NetworkData) {
-        info!("Sending data {:?} to {:?}", data, address);
+        debug!("Sending data {:?} to {:?}", data, address);
 
         let encoded_data = data.encode();
         if let Err(e) = self.socket.try_send_to(&encoded_data, address) {
